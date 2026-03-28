@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="player" data-current-song-key="{{ current_song.stem if current_song else '' }}">
-	<img src="{{ get_song_cover_art() }}" alt="{{ current_song.title }} cover art" class="cover-art">
+	<img src="{{ get_song_cover_art() }}" alt="{{ current_song.title }} cover art" class="cover-art" />
 	<div class="controls">
 		<div class="controls-row">
 			<div class="song-details">
@@ -12,11 +12,11 @@
 				<p class="subtitle is-5">{{ current_song.artist }} - {{ current_song.album }}</p>
 			</div>
 			<div class="buttons transport-controls are-medium" role="group" aria-label="Player controls">
-				<button class="button" type="button" aria-label="Toggle shuffle"><span class="material-icons" aria-hidden="true">shuffle</span></button>
+				<button class="button" type="button" aria-label="Toggle shuffle"><span class="material-icons shuffle-icon" aria-hidden="true">shuffle</span></button>
 				<button class="button" type="button" aria-label="Previous track"><span class="material-icons" aria-hidden="true">skip_previous</span></button>
 				<button class="button" type="button" aria-label="Play or pause"><span class="material-icons play-pause-icon" aria-hidden="true">pause</span></button>
 				<button class="button" type="button" aria-label="Next track"><span class="material-icons" aria-hidden="true">skip_next</span></button>
-				<button class="button" type="button" aria-label="Toggle repeat"><span class="material-icons" aria-hidden="true">repeat</span></button>
+				<button class="button" type="button" aria-label="Toggle repeat"><span class="material-icons repeat-icon" aria-hidden="true">repeat</span></button>
 			</div>
 		</div>
 		<div class="playback-progress">
@@ -29,6 +29,9 @@
 
 <script>
 	const nextUrl = '{{ url_for("player.next_song") }}';
+	const prevUrl = '{{ url_for("player.previous_song") }}';
+	const shuffleUrl = '{{ url_for("player.toggle_shuffle") }}';
+	const repeatUrl = '{{ url_for("player.toggle_repeat") }}';
 	const togglePlaybackUrl = '{{ url_for("player.toggle_playback") }}';
 	const stateUrl = '{{ url_for("player.state") }}';
 	const coverImage = document.querySelector('img.cover-art');
@@ -40,7 +43,15 @@
 	const playPauseButton = document.querySelector('[aria-label="Play or pause"]');
 	const playPauseIcon = document.querySelector('.play-pause-icon');
 	const nextButton = document.querySelector('[aria-label="Next track"]');
+	const prevButton = document.querySelector('[aria-label="Previous track"]');
+	const shuffleButton = document.querySelector('[aria-label="Toggle shuffle"]');
+	const shuffleIcon = document.querySelector('.shuffle-icon');
+	const repeatButton = document.querySelector('[aria-label="Toggle repeat"]');
+	const repeatIcon = document.querySelector('.repeat-icon');
+
 	let currentSongKey = document.querySelector('.player').dataset.currentSongKey || null;
+	let shuffled = 'false';
+	let repeatMode = 'none';
 
 	function formatTime(seconds) {
 		const totalSeconds = Math.max(0, Math.floor(seconds || 0));
@@ -50,6 +61,18 @@
 	}
 
 	function renderPlayback(song) {
+		shuffleIcon.textContent = shuffled ? 'shuffle_on' : 'shuffle';
+		
+		if (repeatMode === 'one') {
+			repeatIcon.textContent = 'repeat_one';
+		} else if (repeatMode === 'all') {
+			repeatIcon.classList.add('is-active');
+			repeatIcon.textContent = 'repeat';
+		} else {
+			repeatIcon.classList.remove('is-active');
+			repeatIcon.textContent = 'repeat';
+		}
+
 		if (!song) {
 			progressBar.max = 1;
 			progressBar.value = 0;
@@ -92,6 +115,8 @@
 
 			const payload = await response.json();
 			const song = payload.song;
+			shuffled = payload.shuffled;
+			repeatMode = payload.repeat_mode;
 			if (song && song.key !== currentSongKey) {
 				renderSong(song);
 			} else {
@@ -109,6 +134,44 @@
 		}
 
 		const data = await response.json();
+		shuffled = data.shuffled;
+		repeatMode = data.repeat_mode;
+		renderSong(data);
+	});
+
+	prevButton.addEventListener('click', async function() {
+		const response = await fetch(prevUrl, { method: 'POST' });
+		if (!response.ok) {
+			return;
+		}
+
+		const data = await response.json();
+		shuffled = data.shuffled;
+		repeatMode = data.repeat_mode;
+		renderSong(data);
+	});
+
+	shuffleButton.addEventListener('click', async function() {
+		const response = await fetch(shuffleUrl, { method: 'POST' });
+		if (!response.ok) {
+			return;
+		}
+
+		const data = await response.json();
+		shuffled = data.shuffled;
+		repeatMode = data.repeat_mode;
+		renderSong(data);
+	});
+
+	repeatButton.addEventListener('click', async function() {
+		const response = await fetch(repeatUrl, { method: 'POST' });
+		if (!response.ok) {
+			return;
+		}
+
+		const data = await response.json();
+		shuffled = data.shuffled;
+		repeatMode = data.repeat_mode;
 		renderSong(data);
 	});
 
@@ -119,6 +182,8 @@
 		}
 
 		const data = await response.json();
+		shuffled = data.shuffled;
+		repeatMode = data.repeat_mode;
 		renderSong(data);
 	});
 

@@ -21,11 +21,14 @@ class Song:
 	def __init__(self, path: Path):
 		self.path = Path(path)
 		self.metadatafile = eyed3.load(self.path)
-		self.audio = pygame.mixer.Sound(str(self.path))
-		self.duration = float(self.audio.get_length())
+		self.audio = None
+		self.duration = 0.0
 
 		if self.metadatafile is None:
 			raise ValueError(f"Could not load audio file: {self.path}")
+
+		if self.metadatafile.info and self.metadatafile.info.time_secs:
+			self.duration = float(self.metadatafile.info.time_secs)
 
 		self.playing = False
 		self.paused = False
@@ -80,6 +83,8 @@ class Song:
 				raise ValueError(f"Invalid cover path: {path}") from exc
 
 	def play(self):
+		self._ensure_audio_loaded()
+
 		if self.playing:
 			if self.paused:
 				pygame.mixer.unpause()
@@ -93,6 +98,12 @@ class Song:
 		self.playing = True
 		return self
 
+	def _ensure_audio_loaded(self):
+		if self.audio is None:
+			self.audio = pygame.mixer.Sound(str(self.path))
+			if self.duration <= 0:
+				self.duration = float(self.audio.get_length())
+
 	def pause(self):
 		if self.paused:
 			return self
@@ -104,7 +115,8 @@ class Song:
 		return self
 
 	def stop(self):
-		self.audio.stop()
+		if self.audio is not None:
+			self.audio.stop()
 		self.playing = False
 		self.paused = False
 		return self

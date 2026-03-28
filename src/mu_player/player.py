@@ -1,3 +1,5 @@
+import random
+
 from flask import (  # noqa
 	Blueprint, g, render_template, request, url_for, jsonify
 )
@@ -10,11 +12,14 @@ bp = Blueprint("player", __name__, url_prefix="/player")
 
 song_dir = Path(r"C:\Users\after\OneDrive\Music\good kid")
 
-songs = (Song(p) for p in song_dir.rglob("*.mp3"))
+songs = list(Song(p) for p in song_dir.rglob("*.mp3"))
+queue = songs.copy()
+current_song_index = -1
 
 current_song = None
 playback_started_at = None
 playback_paused_elapsed = None
+repeat_mode = "none"  # none, one, all
 
 
 def get_song_elapsed_seconds(song):
@@ -52,15 +57,55 @@ def serialize_song(song: Song):
 		"elapsed": elapsed,
 		"is_paused": song.paused,
 		"is_playing": song.playing and not song.paused,
+		"shuffled": shuffled(),
+		"repeat_mode": repeat_mode,
 	}
 
 
 def get_next_song():
-	global current_song, playback_started_at, playback_paused_elapsed
-	current_song = next(songs, None)
+	global current_song, current_song_index, playback_started_at, playback_paused_elapsed
+	if repeat_mode == "one" and current_song is not None:
+		# Repeat current song
+		current_song.stop()
+		current_song.play()
+		playback_started_at = time.monotonic()
+		playback_paused_elapsed = None
+		return
+
+	current_song_index += 1
+	if current_song_index < len(queue):
+		current_song = queue[current_song_index]
+	else:
+		if repeat_mode == "all" and len(queue) > 0:
+			# Loop back to first song
+			current_song_index = 0
+			current_song = queue[0]
+		else:
+			current_song = None
+			current_song_index = len(queue) - 1
 	pygame.mixer.stop()
 	print(f"Now playing: {current_song.stem if current_song else 'No more songs'}")
 	if current_song:
+		current_song.stop()
+		current_song.play()
+		playback_started_at = time.monotonic()
+		playback_paused_elapsed = None
+	else:
+		playback_started_at = None
+		playback_paused_elapsed = None
+
+
+def get_previous_song():
+	global current_song, current_song_index, playback_started_at, playback_paused_elapsed
+	current_song_index = max(-1, current_song_index - 1)
+	if current_song_index >= 0:
+		current_song = queue[current_song_index]
+	else:
+		current_song = None
+	pygame.mixer.stop()
+	print(f"Now playing: {current_song.stem if current_song else 'No more songs'}")
+	if current_song:
+		current_song.stop()
 		current_song.play()
 		playback_started_at = time.monotonic()
 		playback_paused_elapsed = None
@@ -85,6 +130,34 @@ def toggle_song_playback():
 		current_song.pause()
 
 
+def toggle_shuffle_queue():
+	global queue, current_song_index
+
+	if queue == songs:
+		queue = songs.copy()
+		if current_song in queue:
+			queue.remove(current_song)
+			queue.insert(0, current_song)
+
+		random.shuffle(queue)
+	else:
+		queue = songs.copy()
+		if current_song in queue:
+			current_song_index = queue.index(current_song)
+		else:
+			current_song_index = -1
+
+
+def toggle_repeat_mode():
+	global repeat_mode
+	if repeat_mode == "none":
+		repeat_mode = "one"
+	elif repeat_mode == "one":
+		repeat_mode = "all"
+	else:
+		repeat_mode = "none"
+
+
 @bp.route("/")
 def index():
 	if current_song is None:
@@ -94,7 +167,7 @@ def index():
 
 @bp.route("/state")
 def state():
-	return jsonify({"song": serialize_song(current_song)})
+	return jsonify({"song": serialize_song(current_song), "shuffled": shuffled(), "repeat_mode": repeat_mode})
 
 
 @bp.route("/next", methods=["POST"])
@@ -111,3 +184,31 @@ def toggle_playback():
 	if current_song:
 		return jsonify(serialize_song(current_song))
 	return {"error": "No song loaded"}, 404
+
+
+@bp.route("/previous", methods=["POST"])
+def previous_song():
+	get_previous_song()
+	if current_song:
+		return jsonify(serialize_song(current_song))
+	return {"error": "No more songs"}, 204
+
+
+@bp.route("/shuffle", methods=["POST"])
+def toggle_shuffle():
+	toggle_shuffle_queue()
+	if current_song:
+		return jsonify(serialize_song(current_song))
+	return {"error": "No song loaded"}, 404
+
+
+@bp.route("/repeat", methods=["POST"])
+def toggle_repeat():
+	toggle_repeat_mode()
+	if current_song:
+		return jsonify(serialize_song(current_song))
+	return {"error": "No song loaded"}, 404
+
+
+def shuffled():
+	return queue != songs

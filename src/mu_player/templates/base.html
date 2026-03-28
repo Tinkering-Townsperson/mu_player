@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+		<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+		<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+		<title>{% block title %}{% endblock %} - μPlayer</title>
+	</head>
+	<body>
+		<nav>
+			<h1 class="title is-4">μPlayer</h1>
+			<ul>
+				<li><a href="{{ url_for('player.index') }}">player</a></li>
+				<li><a href="{{ url_for('preferences.index') }}">preferences</a></li>
+			</ul>
+		</nav>
+		<section class="content">
+			{% block content %}{% endblock %}
+		</section>
+	</body>
+</html>

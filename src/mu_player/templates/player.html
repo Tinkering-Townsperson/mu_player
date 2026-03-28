@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Player{% endblock %}
+
+{% block content %}
+<div class="player" data-current-song-key="{{ current_song.stem if current_song else '' }}">
+	<img src="{{ get_song_cover_art() }}" alt="{{ current_song.title }} cover art" class="cover-art">
+	<div class="controls">
+		<div class="controls-row">
+			<div class="song-details">
+				<h3 class="title is-3" title="{{ current_song.tracknum }}">{{ current_song.title }}</h3>
+				<p class="subtitle is-5">{{ current_song.artist }} - {{ current_song.album }}</p>
+			</div>
+			<div class="buttons transport-controls are-medium" role="group" aria-label="Player controls">
+				<button class="button" type="button" aria-label="Toggle shuffle"><span class="material-icons" aria-hidden="true">shuffle</span></button>
+				<button class="button" type="button" aria-label="Previous track"><span class="material-icons" aria-hidden="true">skip_previous</span></button>
+				<button class="button" type="button" aria-label="Play or pause"><span class="material-icons play-pause-icon" aria-hidden="true">pause</span></button>
+				<button class="button" type="button" aria-label="Next track"><span class="material-icons" aria-hidden="true">skip_next</span></button>
+				<button class="button" type="button" aria-label="Toggle repeat"><span class="material-icons" aria-hidden="true">repeat</span></button>
+			</div>
+		</div>
+		<div class="playback-progress">
+			<span class="playback-time playback-time-current" aria-live="polite">0:00</span>
+			<progress class="progress is-small is-info" value="0" max="1">0%</progress>
+			<span class="playback-time playback-time-total" aria-live="polite">0:00</span>
+		</div>
+	</div>
+</div>
+
+<script>
+	const nextUrl = '{{ url_for("player.next_song") }}';
+	const togglePlaybackUrl = '{{ url_for("player.toggle_playback") }}';
+	const stateUrl = '{{ url_for("player.state") }}';
+	const coverImage = document.querySelector('img.cover-art');
+	const titleElement = document.querySelector('h3.title');
+	const subtitleElement = document.querySelector('p.subtitle');
+	const progressBar = document.querySelector('progress.progress');
+	const playbackTimeCurrent = document.querySelector('.playback-time-current');
+	const playbackTimeTotal = document.querySelector('.playback-time-total');
+	const playPauseButton = document.querySelector('[aria-label="Play or pause"]');
+	const playPauseIcon = document.querySelector('.play-pause-icon');
+	const nextButton = document.querySelector('[aria-label="Next track"]');
+	let currentSongKey = document.querySelector('.player').dataset.currentSongKey || null;
+
+	function formatTime(seconds) {
+		const totalSeconds = Math.max(0, Math.floor(seconds || 0));
+		const minutes = Math.floor(totalSeconds / 60);
+		const remainingSeconds = String(totalSeconds % 60).padStart(2, '0');
+		return minutes + ':' + remainingSeconds;
+	}
+
+	function renderPlayback(song) {
+		if (!song) {
+			progressBar.max = 1;
+			progressBar.value = 0;
+			playbackTimeCurrent.textContent = '0:00';
+			playbackTimeTotal.textContent = '0:00';
+			playPauseIcon.textContent = 'play_arrow';
+			return;
+		}
+
+		const duration = Number(song.duration) || 0;
+		const elapsed = Math.min(Math.max(Number(song.elapsed) || 0, 0), duration || 0);
+
+		progressBar.max = Math.max(duration, 1);
+		progressBar.value = Math.min(elapsed, progressBar.max);
+		playbackTimeCurrent.textContent = formatTime(elapsed);
+		playbackTimeTotal.textContent = formatTime(duration);
+		playPauseIcon.textContent = song.is_paused ? 'play_arrow' : 'pause';
+	}
+
+	function renderSong(song) {
+		if (!song) {
+			renderPlayback(song);
+			return;
+		}
+
+		coverImage.src = song.cover;
+		titleElement.textContent = song.title;
+		titleElement.title = song.tracknum ? "Track #" + song.tracknum : '';
+		subtitleElement.textContent = song.artist + ' - ' + song.album;
+		currentSongKey = song.key;
+		renderPlayback(song);
+	}
+
+	async function fetchState() {
+		try {
+			const response = await fetch(stateUrl, { cache: 'no-store' });
+			if (!response.ok) {
+				return;
+			}
+
+			const payload = await response.json();
+			const song = payload.song;
+			if (song && song.key !== currentSongKey) {
+				renderSong(song);
+			} else {
+				renderPlayback(song);
+			}
+		} catch (_error) {
+			// Polling failures are transient; keep the UI responsive.
+		}
+	}
+
+	nextButton.addEventListener('click', async function() {
+		const response = await fetch(nextUrl, { method: 'POST' });
+		if (!response.ok) {
+			return;
+		}
+
+		const data = await response.json();
+		renderSong(data);
+	});
+
+	playPauseButton.addEventListener('click', async function() {
+		const response = await fetch(togglePlaybackUrl, { method: 'POST' });
+		if (!response.ok) {
+			return;
+		}
+
+		const data = await response.json();
+		renderSong(data);
+	});
+
+	fetchState();
+	setInterval(fetchState, 1000);
+</script>
+{% endblock %}
+
+{% macro get_song_cover_art() %}
+	{% if current_song.cover %}
+		{{ url_for('covers', filename=current_song.coverfile) }}
+	{% else %}
+		{{ url_for('static', filename='default_cover.png') }}
+	{% endif %}
+{% endmacro %}

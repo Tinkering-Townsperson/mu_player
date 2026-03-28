@@ -1,0 +1,223 @@
+@import "https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css";
+
+:root {
+	--bulma-background: #282c34;
+	--accent-color: #70c991;
+	--font-stack: "MesloLGM Nerd Font Mono", monospace;
+	--bulma-body-family: var(--font-stack);
+}
+
+html {
+	background: var(--bulma-background);
+	color: var(--text-color);
+	font-family: var(--font-stack);
+	padding: 1rem;
+	max-width: 100vw;
+	max-height: 100vh;
+}
+
+body {
+	max-width: 960px;
+	max-height: 960px;
+	border-radius: 15px;
+	padding-bottom: 0.1rem;
+	margin: 0 auto;
+	background: #ffffff11;
+}
+
+.player, .preferences {
+	width: min(900px, 100%);
+	margin: 2rem auto;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+img.cover-art {
+	border-radius: 15px;
+	height: 55vh;
+	width: 55vh;
+	object-fit: cover;
+	filter: drop-shadow(0 0 10px #000000aa);
+}
+
+.player .controls {
+	width: 100%;
+	background: #ffffff11;
+	margin-top: 1rem;
+	padding: 1rem;
+	border-radius: 15px;
+}
+
+p.subtitle {
+	font-family: var(--font-stack);
+}
+
+.controls-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	width: 100%;
+}
+
+.song-details {
+	text-align: left;
+	flex: 1;
+}
+
+.song-details .title,
+.song-details .subtitle {
+	margin: 0;
+}
+
+.song-details .subtitle {
+	margin-top: 0.35rem;
+}
+
+.song-details, .transport-controls {
+	margin-bottom: 1rem;
+}
+
+.transport-controls {
+	justify-content: flex-end;
+}
+
+.transport-controls .button {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 0.2rem;
+	min-width: 0;
+	height: auto;
+	color: #d7e7de;
+}
+
+.transport-controls .button.is-primary,
+.transport-controls .button.is-light {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+.transport-controls .button .material-icons {
+	font-size: 2rem;
+	line-height: 1;
+}
+
+.transport-controls .button:hover, nav a:hover {
+	color: var(--accent-color);
+	transform: translateY(-1px);
+	filter: drop-shadow(0 0 5px #000000aa);
+}
+
+.transport-controls .button:focus-visible {
+	outline: 2px solid var(--accent-color);
+	outline-offset: 4px;
+	border-radius: 6px;
+	filter: drop-shadow(0 0 5px #000000aa);
+}
+
+.playback-progress {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+}
+
+.playback-progress .progress {
+	flex: 1;
+	margin-bottom: 0;
+}
+
+.playback-time {
+	min-width: 2.75rem;
+	font-size: 0.85rem;
+	color: #d7e7de;
+	line-height: 1;
+}
+
+.playback-time-current {
+	text-align: left;
+}
+
+.playback-time-total {
+	text-align: right;
+}
+
+@media (max-width: 768px) {
+	img.cover-art {
+		border-radius: 15px;
+		height: 80vw;
+		width: 80vw;
+		object-fit: cover;
+		filter: drop-shadow(0 0 10px #000000aa);
+	}
+
+	.controls {
+		max-width: 80vw;
+	}
+
+	.controls-row {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.song-details {
+		text-align: center;
+	}
+
+	.transport-controls {
+		justify-content: center;
+	}
+}
+
+h1.title, h2.title, h3.title, h4.title, h5.title, h6.title {
+	font-family: var(--font-stack);
+	margin: 1rem 0;
+}
+
+a {
+	color: var(--accent-color);
+}
+
+nav > h1.title:not(:last-child) {
+	color: var(--accent-color);
+	margin: 1rem;
+}
+
+nav {
+	border-radius: 15px 15px 0 0;
+	background: #ffffff11;
+	display: flex;
+	align-items: center;
+	padding: 0 0.5rem;
+}
+
+nav h1 {
+	color: var(--accent-color);
+	font-weight: bold;
+	flex: auto;
+	margin: 0;
+	filter: drop-shadow(0 0 5px #000000aa);
+}
+
+nav a {
+	color: #d7e7de;
+	text-decoration: none;
+	border-radius: 5px;
+	margin: 0.25rem 0.5rem;
+	padding: 0.15rem;
+}
+
+nav ul  {
+	display: flex;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+nav ul li a, nav ul li span, header .action {
+	display: block;
+	padding: 0.5rem;
+}

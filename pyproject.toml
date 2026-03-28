@@ -1,6 +1,6 @@
 [project]
 name = "mu_player"
-description = "Web-based flask application for playing mp3 files"
+description = "A music player with a flask web interface (so you can control your music from other devices!)"
 version = "1.0.0"
 readme = "README.md"
 authors = [
@@ -29,3 +29,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.dependencies]
 flask = "^3.1.3"
 eyed3 = "^0.9.9"
+pygame-ce = "^2.5.7"

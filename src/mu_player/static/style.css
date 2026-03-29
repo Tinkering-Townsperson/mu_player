@@ -11,7 +11,7 @@ html {
 	background: var(--bulma-background);
 	color: var(--text-color);
 	font-family: var(--font-stack);
-	padding: 1rem;
+	padding: 0.5rem;
 	max-width: 100vw;
 	max-height: 100vh;
 }
@@ -207,7 +207,6 @@ nav a {
 	text-decoration: none;
 	border-radius: 5px;
 	margin: 0.25rem 0.5rem;
-	padding: 0.15rem;
 }
 
 nav ul  {
@@ -219,5 +218,27 @@ nav ul  {
 
 nav ul li a, nav ul li span, header .action {
 	display: block;
-	padding: 0.5rem;
+	padding: 0.3rem;
+}
+
+nav a .nav-icon {
+	display: none;
+	line-height: 1;
+}
+
+@media (max-width: 768px) {
+	nav a {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	nav a .nav-label {
+		display: none;
+	}
+
+	nav a .nav-icon {
+		display: inline-block;
+		font-size: 1.35rem;
+	}
 }

@@ -35,4 +35,7 @@ def create_app(test_config=None):
 	from . import preferences
 	app.register_blueprint(preferences.bp)
 
+	from . import connect
+	app.register_blueprint(connect.bp)
+
 	return app

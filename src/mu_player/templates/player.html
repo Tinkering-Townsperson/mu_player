@@ -21,7 +21,7 @@
 		</div>
 		<div class="playback-progress">
 			<span class="playback-time playback-time-current" aria-live="polite">0:00</span>
-			<progress class="progress is-small is-info" value="0" max="1">0%</progress>
+			<progress class="progress is-small is-success" value="0" max="1">0%</progress>
 			<span class="playback-time playback-time-total" aria-live="polite">0:00</span>
 		</div>
 	</div>
@@ -62,7 +62,7 @@
 
 	function renderPlayback(song) {
 		shuffleIcon.textContent = shuffled ? 'shuffle_on' : 'shuffle';
-		
+
 		if (repeatMode === 'one') {
 			repeatIcon.textContent = 'repeat_one';
 		} else if (repeatMode === 'all') {

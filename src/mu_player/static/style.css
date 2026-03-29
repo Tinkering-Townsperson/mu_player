@@ -116,7 +116,7 @@ p.subtitle {
 	filter: drop-shadow(0 0 5px #000000aa);
 }
 
-.transport-controls .button:focus-visible {
+.transport-controls .button:focus-visible, nav a:focus-visible {
 	outline: 2px solid var(--accent-color);
 	outline-offset: 4px;
 	border-radius: 6px;

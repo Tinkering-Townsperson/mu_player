@@ -1,4 +1,5 @@
 import random
+from threading import Lock
 
 from flask import (  # noqa
 	Blueprint, g, render_template, request, url_for, jsonify
@@ -20,6 +21,7 @@ current_song = None
 playback_started_at = None
 playback_paused_elapsed = None
 repeat_mode = "none"  # none, one, all
+auto_advance_lock = Lock()
 
 
 def get_song_elapsed_seconds(song):
@@ -38,6 +40,31 @@ def get_song_elapsed_seconds(song):
 		return 0.0
 
 	return min(elapsed, duration)
+
+
+def maybe_advance_finished_song():
+	"""Advance to the next song when the current one ends naturally."""
+	if not auto_advance_lock.acquire(blocking=False):
+		return
+
+	try:
+		if current_song is None or playback_started_at is None:
+			return
+
+		if current_song.paused or not current_song.playing:
+			return
+
+		duration = current_song.duration
+		if duration <= 0:
+			return
+
+		elapsed = time.monotonic() - playback_started_at
+		# Advance if the mixer is idle (natural end) or elapsed reached duration.
+		if not pygame.mixer.get_busy() or elapsed >= duration:
+			current_song.stop()
+			get_next_song()
+	finally:
+		auto_advance_lock.release()
 
 
 def serialize_song(song: Song):
@@ -167,6 +194,7 @@ def index():
 
 @bp.route("/state")
 def state():
+	maybe_advance_finished_song()
 	return jsonify({"song": serialize_song(current_song), "shuffled": shuffled(), "repeat_mode": repeat_mode})
 
 

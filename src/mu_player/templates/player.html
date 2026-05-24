@@ -4,9 +4,27 @@
 
 {% block content %}
 <div class="player" data-current-song-key="{{ current_song.stem if current_song else '' }}" data-show-cover-art="{{ show_cover_art|tojson }}">
-	{% if show_cover_art %}
-	<img src="{{ get_song_cover_art(current_song) }}" alt="{{ current_song.title if current_song else 'Current track' }} cover art" class="cover-art" />
-	{% endif %}
+	<div class="art-rail">
+		<details class="side-pane queue-pane">
+			<summary class="side-pane-label" aria-label="Toggle queue pane">
+				<span class="material-icons side-pane-label-icon" aria-hidden="true">queue_music</span>
+				<span class="side-pane-label-title">queue</span>
+			</summary>
+			<div class="side-pane-body" aria-hidden="true"></div>
+		</details>
+		{% if show_cover_art %}
+		<img src="{{ get_song_cover_art(current_song) }}" alt="{{ current_song.title if current_song else 'Current track' }} cover art" class="cover-art" />
+		{% endif %}
+		<details class="side-pane lyrics-pane">
+			<summary class="side-pane-label" aria-label="Toggle lyrics pane">
+				<span class="material-icons side-pane-label-icon" aria-hidden="true">subject</span>
+				<span class="side-pane-label-title">lyrics</span>
+			</summary>
+			<div class="side-pane-body" aria-hidden="true">
+				<div class="side-pane-body-content desktop-lyrics-content">{{ current_song.lyrics if current_song and current_song.lyrics and current_song.lyrics|trim else 'No lyrics provided' }}</div>
+			</div>
+		</details>
+	</div>
 	<div class="controls">
 		<div class="controls-row">
 			<div class="song-details">
@@ -27,6 +45,28 @@
 			<span class="playback-time playback-time-total" aria-live="polite">0:00</span>
 		</div>
 	</div>
+	<div class="mobile-tabs" aria-label="Queue and lyrics tabs">
+		<input class="mobile-tab-input" type="radio" name="mobile-pane" id="mobile-pane-queue" checked />
+		<input class="mobile-tab-input" type="radio" name="mobile-pane" id="mobile-pane-lyrics" />
+		<div class="mobile-tab-list" role="tablist" aria-label="Choose a pane">
+			<label class="mobile-tab" for="mobile-pane-queue" role="tab" aria-controls="mobile-pane-queue-panel">
+				<span class="material-icons mobile-tab-icon" aria-hidden="true">queue_music</span>
+				<span class="mobile-tab-title">queue</span>
+			</label>
+			<label class="mobile-tab" for="mobile-pane-lyrics" role="tab" aria-controls="mobile-pane-lyrics-panel">
+				<span class="material-icons mobile-tab-icon" aria-hidden="true">subject</span>
+				<span class="mobile-tab-title">lyrics</span>
+			</label>
+		</div>
+		<div class="mobile-tab-panels">
+			<section class="mobile-tab-panel mobile-tab-panel-queue" id="mobile-pane-queue-panel" role="tabpanel">
+				<h4 class="mobile-tab-panel-title"></h4>
+			</section>
+			<section class="mobile-tab-panel mobile-tab-panel-lyrics" id="mobile-pane-lyrics-panel" role="tabpanel">
+				<div class="mobile-lyrics-content">{{ current_song.lyrics if current_song and current_song.lyrics and current_song.lyrics|trim else 'No lyrics provided' }}</div>
+			</section>
+		</div>
+	</div>
 </div>
 
 <script>
@@ -41,6 +81,8 @@
 	const coverImage = document.querySelector('img.cover-art');
 	const titleElement = document.querySelector('h3.title');
 	const subtitleElement = document.querySelector('p.subtitle');
+	const desktopLyricsElement = document.querySelector('.desktop-lyrics-content');
+	const mobileLyricsElement = document.querySelector('.mobile-lyrics-content');
 	const progressBar = document.querySelector('progress.progress');
 	const playbackTimeCurrent = document.querySelector('.playback-time-current');
 	const playbackTimeTotal = document.querySelector('.playback-time-total');
@@ -56,6 +98,7 @@
 	let currentSongKey = document.querySelector('.player').dataset.currentSongKey || null;
 	let shuffled = 'false';
 	let repeatMode = 'none';
+	const noLyricsText = 'No lyrics provided';
 
 	function formatTime(seconds) {
 		const totalSeconds = Math.max(0, Math.floor(seconds || 0));
@@ -98,6 +141,7 @@
 
 	function renderSong(song) {
 		if (!song) {
+			renderLyrics(song);
 			renderPlayback(song);
 			return;
 		}
@@ -109,7 +153,30 @@
 		titleElement.title = song.tracknum ? "Track #" + song.tracknum : '';
 		subtitleElement.textContent = song.artist + ' - ' + song.album;
 		currentSongKey = song.key;
+		renderLyrics(song);
 		renderPlayback(song);
+	}
+
+	function getLyricsText(song) {
+		if (!song || !song.lyrics || !song.lyrics.trim()) {
+			return noLyricsText;
+		}
+
+		return song.lyrics;
+	}
+
+	function renderLyrics(song) {
+		const lyricsText = getLyricsText(song);
+
+		if (desktopLyricsElement) {
+			desktopLyricsElement.textContent = lyricsText;
+			desktopLyricsElement.scrollTop = 0;
+		}
+
+		if (mobileLyricsElement) {
+			mobileLyricsElement.textContent = lyricsText;
+			mobileLyricsElement.scrollTop = 0;
+		}
 	}
 
 	async function fetchState() {

@@ -38,6 +38,8 @@ class Song:
 		self.album = "Unknown Album"
 		self.tracknum = None
 
+		self.lyrics = None
+
 		self.cover = None
 		self.coverfile = None
 
@@ -53,6 +55,8 @@ class Song:
 			self.album = self.metadatafile.tag.album
 		if self.metadatafile.tag.track_num:
 			self.tracknum = self.metadatafile.tag.track_num[0]
+		if self.metadatafile.tag.lyrics:
+			self.lyrics = self.metadatafile.tag.lyrics[0].text
 
 		self.generate_stem()
 

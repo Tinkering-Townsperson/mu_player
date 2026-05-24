@@ -139,6 +139,7 @@ def serialize_song(song: Song):
 		"tracknum": song.tracknum,
 		"artist": song.artist,
 		"album": song.album,
+		"lyrics": song.lyrics,
 		"cover": cover_url,
 		"key": song.stem,
 		"duration": song.duration,

@@ -9,9 +9,14 @@ import time
 from pathlib import Path
 
 from .song import Song, pygame
+from .config import load_app_config
 bp = Blueprint("player", __name__, url_prefix="/player")
 
-song_dir = Path(r"C:\Users\after\OneDrive\Music\good kid")
+app_config = load_app_config()
+song_dir = Path(app_config["music_folder"]).expanduser()
+show_cover_art = app_config["show_cover_art"]
+default_volume = app_config["default_volume"]
+auto_play_on_open = app_config["auto_play_on_open"]
 
 songs = list(Song(p) for p in song_dir.rglob("*.mp3"))
 queue = songs.copy()
@@ -22,6 +27,60 @@ playback_started_at = None
 playback_paused_elapsed = None
 repeat_mode = "none"  # none, one, all
 auto_advance_lock = Lock()
+
+
+def _load_songs(directory: Path):
+	if not directory.exists() or not directory.is_dir():
+		return []
+
+	try:
+		return [Song(p) for p in directory.rglob("*.mp3")]
+	except OSError:
+		return []
+
+
+def reload_runtime_preferences(reload_library=False):
+	global app_config, song_dir, show_cover_art, default_volume, auto_play_on_open
+	global songs, queue, current_song, current_song_index, playback_started_at, playback_paused_elapsed
+
+	app_config = load_app_config()
+	show_cover_art = app_config["show_cover_art"]
+	default_volume = app_config["default_volume"]
+	auto_play_on_open = app_config["auto_play_on_open"]
+
+	if not reload_library:
+		if current_song is not None:
+			apply_default_volume(current_song)
+		return
+
+	previous_song_path = current_song.path if current_song is not None else None
+
+	song_dir = Path(app_config["music_folder"]).expanduser()
+	new_songs = _load_songs(song_dir)
+
+	pygame.mixer.stop()
+	songs = new_songs
+	queue = songs.copy()
+	playback_started_at = None
+	playback_paused_elapsed = None
+	current_song = None
+	current_song_index = -1
+
+	if previous_song_path is not None:
+		for idx, song in enumerate(queue):
+			if song.path == previous_song_path:
+				current_song = song
+				current_song_index = idx
+				break
+
+	if current_song is not None:
+		apply_default_volume(current_song)
+
+
+def apply_default_volume(song):
+	if song is None:
+		return
+	song.set_volume(default_volume / 100)
 
 
 def get_song_elapsed_seconds(song):
@@ -71,7 +130,9 @@ def serialize_song(song: Song):
 	if song is None:
 		return None
 
-	cover_url = url_for("covers", filename=song.coverfile) if song.cover else url_for("static", filename="default_cover.png")
+	cover_url = None
+	if show_cover_art:
+		cover_url = url_for("covers", filename=song.coverfile) if song.cover else url_for("static", filename="default_cover.png")
 	elapsed = get_song_elapsed_seconds(song)
 	return {
 		"title": song.title,
@@ -86,6 +147,7 @@ def serialize_song(song: Song):
 		"is_playing": song.playing and not song.paused,
 		"shuffled": shuffled(),
 		"repeat_mode": repeat_mode,
+		"show_cover_art": show_cover_art,
 	}
 
 
@@ -115,6 +177,7 @@ def get_next_song():
 	if current_song:
 		current_song.stop()
 		current_song.play()
+		apply_default_volume(current_song)
 		playback_started_at = time.monotonic()
 		playback_paused_elapsed = None
 	else:
@@ -134,6 +197,7 @@ def get_previous_song():
 	if current_song:
 		current_song.stop()
 		current_song.play()
+		apply_default_volume(current_song)
 		playback_started_at = time.monotonic()
 		playback_paused_elapsed = None
 	else:
@@ -149,8 +213,16 @@ def toggle_song_playback():
 
 	if current_song.paused:
 		current_song.play()
+		apply_default_volume(current_song)
 		if playback_paused_elapsed is not None:
 			playback_started_at = time.monotonic() - playback_paused_elapsed
+		else:
+			playback_started_at = time.monotonic()
+		playback_paused_elapsed = None
+	elif not current_song.playing:
+		current_song.play()
+		apply_default_volume(current_song)
+		playback_started_at = time.monotonic()
 		playback_paused_elapsed = None
 	else:
 		playback_paused_elapsed = get_song_elapsed_seconds(current_song)
@@ -187,15 +259,27 @@ def toggle_repeat_mode():
 
 @bp.route("/")
 def index():
+	global current_song, current_song_index
+
 	if current_song is None:
-		get_next_song()
-	return render_template("player.html", current_song=current_song)
+		if auto_play_on_open:
+			get_next_song()
+		elif queue:
+			current_song_index = 0
+			current_song = queue[current_song_index]
+
+	return render_template("player.html", current_song=current_song, show_cover_art=show_cover_art)
 
 
 @bp.route("/state")
 def state():
 	maybe_advance_finished_song()
-	return jsonify({"song": serialize_song(current_song), "shuffled": shuffled(), "repeat_mode": repeat_mode})
+	return jsonify({
+		"song": serialize_song(current_song),
+		"shuffled": shuffled(),
+		"repeat_mode": repeat_mode,
+		"show_cover_art": show_cover_art,
+	})
 
 
 @bp.route("/next", methods=["POST"])

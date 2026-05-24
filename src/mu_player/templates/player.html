@@ -3,18 +3,20 @@
 {% block title %}Player{% endblock %}
 
 {% block content %}
-<div class="player" data-current-song-key="{{ current_song.stem if current_song else '' }}">
-	<img src="{{ get_song_cover_art() }}" alt="{{ current_song.title }} cover art" class="cover-art" />
+<div class="player" data-current-song-key="{{ current_song.stem if current_song else '' }}" data-show-cover-art="{{ show_cover_art|tojson }}">
+	{% if show_cover_art %}
+	<img src="{{ get_song_cover_art(current_song) }}" alt="{{ current_song.title if current_song else 'Current track' }} cover art" class="cover-art" />
+	{% endif %}
 	<div class="controls">
 		<div class="controls-row">
 			<div class="song-details">
-				<h3 class="title is-3" title="{{ current_song.tracknum }}">{{ current_song.title }}</h3>
-				<p class="subtitle is-5">{{ current_song.artist }} - {{ current_song.album }}</p>
+				<h3 class="title is-3" title="{{ current_song.tracknum if current_song else '' }}">{{ current_song.title if current_song else 'No songs found' }}</h3>
+				<p class="subtitle is-5">{{ (current_song.artist ~ ' - ' ~ current_song.album) if current_song else 'Add songs to your library folder to start playback.' }}</p>
 			</div>
 			<div class="buttons transport-controls are-medium" role="group" aria-label="Player controls">
 				<button class="button" type="button" aria-label="Toggle shuffle"><span class="material-icons shuffle-icon" aria-hidden="true">shuffle</span></button>
 				<button class="button" type="button" aria-label="Previous track"><span class="material-icons" aria-hidden="true">skip_previous</span></button>
-				<button class="button" type="button" aria-label="Play or pause"><span class="material-icons play-pause-icon" aria-hidden="true">pause</span></button>
+				<button class="button" type="button" aria-label="Play or pause"><span class="material-icons play-pause-icon" aria-hidden="true">play_arrow</span></button>
 				<button class="button" type="button" aria-label="Next track"><span class="material-icons" aria-hidden="true">skip_next</span></button>
 				<button class="button" type="button" aria-label="Toggle repeat"><span class="material-icons repeat-icon" aria-hidden="true">repeat</span></button>
 			</div>
@@ -34,6 +36,8 @@
 	const repeatUrl = '{{ url_for("player.toggle_repeat") }}';
 	const togglePlaybackUrl = '{{ url_for("player.toggle_playback") }}';
 	const stateUrl = '{{ url_for("player.state") }}';
+	const playerElement = document.querySelector('.player');
+	const showCoverArt = playerElement.dataset.showCoverArt === 'true';
 	const coverImage = document.querySelector('img.cover-art');
 	const titleElement = document.querySelector('h3.title');
 	const subtitleElement = document.querySelector('p.subtitle');
@@ -89,7 +93,7 @@
 		progressBar.value = Math.min(elapsed, progressBar.max);
 		playbackTimeCurrent.textContent = formatTime(elapsed);
 		playbackTimeTotal.textContent = formatTime(duration);
-		playPauseIcon.textContent = song.is_paused ? 'play_arrow' : 'pause';
+		playPauseIcon.textContent = song.is_playing ? 'pause' : 'play_arrow';
 	}
 
 	function renderSong(song) {
@@ -98,7 +102,9 @@
 			return;
 		}
 
-		coverImage.src = song.cover;
+		if (showCoverArt && coverImage && song.cover) {
+			coverImage.src = song.cover;
+		}
 		titleElement.textContent = song.title;
 		titleElement.title = song.tracknum ? "Track #" + song.tracknum : '';
 		subtitleElement.textContent = song.artist + ' - ' + song.album;
@@ -192,9 +198,9 @@
 </script>
 {% endblock %}
 
-{% macro get_song_cover_art() %}
-	{% if current_song.cover %}
-		{{ url_for('covers', filename=current_song.coverfile) }}
+{% macro get_song_cover_art(song) %}
+	{% if song and song.cover %}
+		{{ url_for('covers', filename=song.coverfile) }}
 	{% else %}
 		{{ url_for('static', filename='default_cover.png') }}
 	{% endif %}

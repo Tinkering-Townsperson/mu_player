@@ -33,6 +33,49 @@ body {
 	align-items: center;
 }
 
+.preferences-form {
+	width: min(700px, 100%);
+	padding: 1rem;
+	border-radius: 12px;
+	background: #ffffff0d;
+}
+
+.preferences-form .label {
+	color: #d7e7de;
+	font-weight: 600;
+}
+
+.preferences-form .input {
+	background: #11141a;
+	color: #d7e7de;
+	border-color: #ffffff22;
+}
+
+.preferences-form .input:focus-visible {
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 0.125em #70c99144;
+}
+
+.preferences-form .help {
+	color: #b4c7bc;
+}
+
+.preferences-checkbox-field .checkbox {
+	color: #d7e7de;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.preferences-checkbox-field input[type="checkbox"] {
+	accent-color: var(--accent-color);
+}
+
+.preferences-notice {
+	width: min(700px, 100%);
+	margin-bottom: 1rem;
+}
+
 .connect svg {
 	background-color: #ffffff;
 	height: 45vh;

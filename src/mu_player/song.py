@@ -114,6 +114,11 @@ class Song:
 
 		return self
 
+	def set_volume(self, volume):
+		self._ensure_audio_loaded()
+		self.audio.set_volume(min(1.0, max(0.0, float(volume))))
+		return self
+
 	def stop(self):
 		if self.audio is not None:
 			self.audio.stop()

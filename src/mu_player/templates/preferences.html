@@ -5,6 +5,91 @@
 {% block content %}
 <div class="preferences">
 	<p class="title is-2">Preferences</p>
-	<p class="subtitle is-4">Preferences content goes here.</p>
+	<p class="subtitle is-6">Update local app settings stored in config.json.</p>
+
+	{% if message %}
+	<div class="notification is-success preferences-notice" role="status">{{ message }}</div>
+	{% endif %}
+
+	{% if error %}
+	<div class="notification is-danger preferences-notice" role="alert">{{ error }}</div>
+	{% endif %}
+
+	<form class="preferences-form" method="post" action="{{ url_for('preferences.index') }}">
+		<div class="field">
+			<label class="label" for="music_folder">Music folder</label>
+			<div class="control">
+				<input
+					class="input"
+					type="text"
+					id="music_folder"
+					name="music_folder"
+					value="{{ config.music_folder }}"
+					placeholder="C:\\Music"
+					required
+				>
+			</div>
+			<p class="help">Absolute path to your MP3 library folder.</p>
+		</div>
+
+		<div class="field">
+			<label class="label" for="default_volume">Default volume</label>
+			<div class="control">
+				<input
+					class="input"
+					type="number"
+					id="default_volume"
+					name="default_volume"
+					value="{{ config.default_volume }}"
+					min="0"
+					max="100"
+					required
+				>
+			</div>
+			<p class="help">Sets initial playback volume from 0 to 100.</p>
+		</div>
+
+		<div class="field preferences-checkbox-field">
+			<label class="checkbox" for="show_cover_art">
+				<input
+					type="checkbox"
+					id="show_cover_art"
+					name="show_cover_art"
+					{% if config.show_cover_art %}checked{% endif %}
+				>
+				Show cover art in player
+			</label>
+		</div>
+
+		<div class="field preferences-checkbox-field">
+			<label class="checkbox" for="auto_play_on_open">
+				<input
+					type="checkbox"
+					id="auto_play_on_open"
+					name="auto_play_on_open"
+					{% if config.auto_play_on_open %}checked{% endif %}
+				>
+				Auto-play first track when opening player
+			</label>
+		</div>
+
+		<div class="field preferences-checkbox-field">
+			<label class="checkbox" for="open_browser_on_start">
+				<input
+					type="checkbox"
+					id="open_browser_on_start"
+					name="open_browser_on_start"
+					{% if config.open_browser_on_start %}checked{% endif %}
+				>
+				Open browser automatically when app starts
+			</label>
+		</div>
+
+		<div class="field is-grouped is-grouped-right">
+			<div class="control">
+				<button class="button is-primary" type="submit">Save preferences</button>
+			</div>
+		</div>
+	</form>
 </div>
 {% endblock %}

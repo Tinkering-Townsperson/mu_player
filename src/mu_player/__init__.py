@@ -6,7 +6,7 @@ from threading import Thread
 
 from flask import Flask, redirect, send_from_directory
 
-from .config import COVERS_DIRECTORY
+from .config import COVERS_DIRECTORY, load_app_config
 
 _browser_opened = False
 
@@ -29,15 +29,15 @@ def create_app(test_config=None):
 
 	os.makedirs(app.instance_path, exist_ok=True)
 
-	# Open browser once on first request
-	@app.before_request
-	def open_browser_once():
-		global _browser_opened
-		if not _browser_opened:
-			_browser_opened = True
-			url = "http://localhost:5000"
-			thread = Thread(target=_open_browser_thread, args=(url,), daemon=True)
-			thread.start()
+	app_config = load_app_config()
+	should_open_browser = app_config.get("open_browser_on_start", True)
+	reloader_process = os.environ.get("WERKZEUG_RUN_MAIN")
+	should_open_in_this_process = reloader_process == "true" or (reloader_process is None and not app.debug)
+	if should_open_browser and should_open_in_this_process and not _browser_opened:
+		_browser_opened = True
+		url = "http://localhost:5000"
+		thread = Thread(target=_open_browser_thread, args=(url,), daemon=True)
+		thread.start()
 
 	@app.route("/")
 	def index():

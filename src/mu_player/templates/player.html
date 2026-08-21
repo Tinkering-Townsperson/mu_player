@@ -3,14 +3,32 @@
 {% block title %}Player{% endblock %}
 
 {% block content %}
-<div class="player" data-current-song-key="{{ current_song.stem if current_song else '' }}" data-show-cover-art="{{ show_cover_art|tojson }}">
+<div class="player" data-current-song-key="{{ current_song.stem if current_song else '' }}" data-show-cover-art="{{ show_cover_art|tojson }}" data-queue-items="{{ queue_items|tojson|forceescape }}">
 	<div class="art-rail">
 		<details class="side-pane queue-pane">
 			<summary class="side-pane-label" aria-label="Toggle queue pane">
 				<span class="material-icons side-pane-label-icon" aria-hidden="true">queue_music</span>
 				<span class="side-pane-label-title">queue</span>
 			</summary>
-			<div class="side-pane-body" aria-hidden="true"></div>
+			<div class="side-pane-body" aria-hidden="true">
+				<div class="side-pane-body-content desktop-queue-content queue-content">
+					{% if queue_items %}
+					<ul class="queue-list">
+						{% for item in queue_items %}
+						<li class="queue-item{% if current_song and item.key == current_song.stem %} is-current{% endif %}">
+							<img class="queue-item-thumb" src="{{ item.cover }}" alt="" aria-hidden="true" />
+							<div class="queue-item-text">
+								<div class="queue-item-title">{{ item.title }}</div>
+								<div class="queue-item-artist">{{ item.artist }}</div>
+							</div>
+						</li>
+						{% endfor %}
+					</ul>
+					{% else %}
+					<div class="queue-empty-state">No songs in queue</div>
+					{% endif %}
+				</div>
+			</div>
 		</details>
 		{% if show_cover_art %}
 		<img src="{{ get_song_cover_art(current_song) }}" alt="{{ current_song.title if current_song else 'Current track' }} cover art" class="cover-art" />
@@ -60,7 +78,23 @@
 		</div>
 		<div class="mobile-tab-panels">
 			<section class="mobile-tab-panel mobile-tab-panel-queue" id="mobile-pane-queue-panel" role="tabpanel">
-				<h4 class="mobile-tab-panel-title"></h4>
+				<div class="mobile-queue-content queue-content">
+					{% if queue_items %}
+					<ul class="queue-list">
+						{% for item in queue_items %}
+						<li class="queue-item{% if current_song and item.key == current_song.stem %} is-current{% endif %}">
+							<img class="queue-item-thumb" src="{{ item.cover }}" alt="" aria-hidden="true" />
+							<div class="queue-item-text">
+								<div class="queue-item-title">{{ item.title }}</div>
+								<div class="queue-item-artist">{{ item.artist }}</div>
+							</div>
+						</li>
+						{% endfor %}
+					</ul>
+					{% else %}
+					<div class="queue-empty-state">No songs in queue</div>
+					{% endif %}
+				</div>
 			</section>
 			<section class="mobile-tab-panel mobile-tab-panel-lyrics" id="mobile-pane-lyrics-panel" role="tabpanel">
 				<div class="mobile-lyrics-content">{{ current_song.lyrics if current_song and current_song.lyrics and current_song.lyrics|trim else 'No lyrics provided' }}</div>
@@ -78,9 +112,15 @@
 	const stateUrl = '{{ url_for("player.state") }}';
 	const playerElement = document.querySelector('.player');
 	const showCoverArt = playerElement.dataset.showCoverArt === 'true';
+	const initialQueueItems = JSON.parse(playerElement.dataset.queueItems || '[]');
+	const artRail = document.querySelector('.art-rail');
+	const queuePaneLabel = document.querySelector('.queue-pane .side-pane-label');
 	const coverImage = document.querySelector('img.cover-art');
+	const lyricsPaneLabel = document.querySelector('.lyrics-pane .side-pane-label');
 	const titleElement = document.querySelector('h3.title');
 	const subtitleElement = document.querySelector('p.subtitle');
+	const desktopQueueElement = document.querySelector('.desktop-queue-content');
+	const mobileQueueElement = document.querySelector('.mobile-queue-content');
 	const desktopLyricsElement = document.querySelector('.desktop-lyrics-content');
 	const mobileLyricsElement = document.querySelector('.mobile-lyrics-content');
 	const progressBar = document.querySelector('progress.progress');
@@ -99,12 +139,40 @@
 	let shuffled = 'false';
 	let repeatMode = 'none';
 	const noLyricsText = 'No lyrics provided';
+	const noQueueText = 'No songs in queue';
+	const defaultOpenedPaneWidth = '13.25rem';
+
+	function snapQueueScroll(container) {
+		if (!container) {
+			return;
+		}
+
+		container.scrollLeft = container.scrollWidth;
+	}
 
 	function formatTime(seconds) {
 		const totalSeconds = Math.max(0, Math.floor(seconds || 0));
 		const minutes = Math.floor(totalSeconds / 60);
 		const remainingSeconds = String(totalSeconds % 60).padStart(2, '0');
 		return minutes + ':' + remainingSeconds;
+	}
+
+	function updateOpenedPaneWidth() {
+		if (!artRail || !queuePaneLabel || !lyricsPaneLabel) {
+			return;
+		}
+
+		const artRailRect = artRail.getBoundingClientRect();
+		const queueLabelRect = queuePaneLabel.getBoundingClientRect();
+		const lyricsLabelRect = lyricsPaneLabel.getBoundingClientRect();
+		const remSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+		const gap = remSize/2;
+		const centerX = artRailRect.left + (artRailRect.width / 2);
+		const leftWidth = centerX - queueLabelRect.right - gap;
+		const rightWidth = lyricsLabelRect.left - centerX - gap;
+		const measuredWidth = Math.max(0, Math.min(leftWidth, rightWidth));
+
+		artRail.style.setProperty('--opened-pane-width', measuredWidth > 0 ? `${measuredWidth}px` : defaultOpenedPaneWidth);
 	}
 
 	function renderPlayback(song) {
@@ -141,8 +209,10 @@
 
 	function renderSong(song) {
 		if (!song) {
+			currentSongKey = null;
 			renderLyrics(song);
 			renderPlayback(song);
+			updateOpenedPaneWidth();
 			return;
 		}
 
@@ -155,6 +225,67 @@
 		currentSongKey = song.key;
 		renderLyrics(song);
 		renderPlayback(song);
+		updateOpenedPaneWidth();
+	}
+
+	function renderQueue(queueItems) {
+		const items = Array.isArray(queueItems) ? queueItems : [];
+		renderQueueInto(desktopQueueElement, items);
+		renderQueueInto(mobileQueueElement, items);
+	}
+
+	function renderQueueInto(container, queueItems) {
+		if (!container) {
+			return;
+		}
+
+		container.replaceChildren();
+
+		if (!queueItems.length) {
+			const emptyState = document.createElement('div');
+			emptyState.className = 'queue-empty-state';
+			emptyState.textContent = noQueueText;
+			container.appendChild(emptyState);
+			return;
+		}
+
+		const list = document.createElement('ul');
+		list.className = 'queue-list';
+
+		queueItems.forEach(function(item) {
+			const queueItem = document.createElement('li');
+			queueItem.className = 'queue-item';
+
+			if (item.key === currentSongKey) {
+				queueItem.classList.add('is-current');
+			}
+
+			const thumbnail = document.createElement('img');
+			thumbnail.className = 'queue-item-thumb';
+			thumbnail.src = item.cover || '';
+			thumbnail.alt = '';
+			thumbnail.setAttribute('aria-hidden', 'true');
+
+			const text = document.createElement('div');
+			text.className = 'queue-item-text';
+
+			const title = document.createElement('div');
+			title.className = 'queue-item-title';
+			title.textContent = item.title || '';
+
+			const artist = document.createElement('div');
+			artist.className = 'queue-item-artist';
+			artist.textContent = item.artist || '';
+
+			text.appendChild(title);
+			text.appendChild(artist);
+			queueItem.appendChild(thumbnail);
+			queueItem.appendChild(text);
+			list.appendChild(queueItem);
+		});
+
+		container.appendChild(list);
+		snapQueueScroll(container);
 	}
 
 	function getLyricsText(song) {
@@ -195,6 +326,7 @@
 			} else {
 				renderPlayback(song);
 			}
+			renderQueue(payload.queue);
 		} catch (_error) {
 			// Polling failures are transient; keep the UI responsive.
 		}
@@ -209,7 +341,8 @@
 		const data = await response.json();
 		shuffled = data.shuffled;
 		repeatMode = data.repeat_mode;
-		renderSong(data);
+		renderSong(data.song);
+		renderQueue(data.queue);
 	});
 
 	prevButton.addEventListener('click', async function() {
@@ -221,7 +354,8 @@
 		const data = await response.json();
 		shuffled = data.shuffled;
 		repeatMode = data.repeat_mode;
-		renderSong(data);
+		renderSong(data.song);
+		renderQueue(data.queue);
 	});
 
 	shuffleButton.addEventListener('click', async function() {
@@ -233,7 +367,8 @@
 		const data = await response.json();
 		shuffled = data.shuffled;
 		repeatMode = data.repeat_mode;
-		renderSong(data);
+		renderSong(data.song);
+		renderQueue(data.queue);
 	});
 
 	repeatButton.addEventListener('click', async function() {
@@ -245,7 +380,8 @@
 		const data = await response.json();
 		shuffled = data.shuffled;
 		repeatMode = data.repeat_mode;
-		renderSong(data);
+		renderSong(data.song);
+		renderQueue(data.queue);
 	});
 
 	playPauseButton.addEventListener('click', async function() {
@@ -257,8 +393,16 @@
 		const data = await response.json();
 		shuffled = data.shuffled;
 		repeatMode = data.repeat_mode;
-		renderSong(data);
+		renderSong(data.song);
+		renderQueue(data.queue);
 	});
+
+	renderQueue(initialQueueItems);
+	updateOpenedPaneWidth();
+	window.addEventListener('resize', updateOpenedPaneWidth);
+	if (document.fonts && document.fonts.ready) {
+		document.fonts.ready.then(updateOpenedPaneWidth).catch(function() {});
+	}
 
 	fetchState();
 	setInterval(fetchState, 1000);

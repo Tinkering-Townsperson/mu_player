@@ -152,6 +152,36 @@ def serialize_song(song: Song):
 	}
 
 
+def serialize_queue_item(song: Song):
+	if song is None:
+		return None
+
+	cover_url = url_for("static", filename="default_cover.png")
+	if song.cover:
+		cover_url = url_for("covers", filename=song.coverfile)
+
+	return {
+		"title": song.title,
+		"artist": song.artist,
+		"cover": cover_url,
+		"key": song.stem,
+	}
+
+
+def serialize_queue():
+	return [serialize_queue_item(song) for song in queue]
+
+
+def serialize_player_state():
+	return {
+		"song": serialize_song(current_song),
+		"queue": serialize_queue(),
+		"shuffled": shuffled(),
+		"repeat_mode": repeat_mode,
+		"show_cover_art": show_cover_art,
+	}
+
+
 def get_next_song():
 	global current_song, current_song_index, playback_started_at, playback_paused_elapsed
 	if repeat_mode == "one" and current_song is not None:
@@ -269,25 +299,25 @@ def index():
 			current_song_index = 0
 			current_song = queue[current_song_index]
 
-	return render_template("player.html", current_song=current_song, show_cover_art=show_cover_art)
+	return render_template(
+		"player.html",
+		current_song=current_song,
+		show_cover_art=show_cover_art,
+		queue_items=serialize_queue(),
+	)
 
 
 @bp.route("/state")
 def state():
 	maybe_advance_finished_song()
-	return jsonify({
-		"song": serialize_song(current_song),
-		"shuffled": shuffled(),
-		"repeat_mode": repeat_mode,
-		"show_cover_art": show_cover_art,
-	})
+	return jsonify(serialize_player_state())
 
 
 @bp.route("/next", methods=["POST"])
 def next_song():
 	get_next_song()
 	if current_song:
-		return jsonify(serialize_song(current_song))
+		return jsonify(serialize_player_state())
 	return {"error": "No more songs"}, 204
 
 
@@ -295,7 +325,7 @@ def next_song():
 def toggle_playback():
 	toggle_song_playback()
 	if current_song:
-		return jsonify(serialize_song(current_song))
+		return jsonify(serialize_player_state())
 	return {"error": "No song loaded"}, 404
 
 
@@ -303,7 +333,7 @@ def toggle_playback():
 def previous_song():
 	get_previous_song()
 	if current_song:
-		return jsonify(serialize_song(current_song))
+		return jsonify(serialize_player_state())
 	return {"error": "No more songs"}, 204
 
 
@@ -311,7 +341,7 @@ def previous_song():
 def toggle_shuffle():
 	toggle_shuffle_queue()
 	if current_song:
-		return jsonify(serialize_song(current_song))
+		return jsonify(serialize_player_state())
 	return {"error": "No song loaded"}, 404
 
 
@@ -319,7 +349,7 @@ def toggle_shuffle():
 def toggle_repeat():
 	toggle_repeat_mode()
 	if current_song:
-		return jsonify(serialize_song(current_song))
+		return jsonify(serialize_player_state())
 	return {"error": "No song loaded"}, 404
 
 

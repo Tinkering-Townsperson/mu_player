@@ -77,7 +77,7 @@ class Song:
 		if self.cover is not None:
 			extension = self.metadatafile.tag.images[0].mime_type.split("/")[-1]
 			self.coverfile = f"{self.stem}.{extension}"
-			print(self.coverfile)
+			# print(self.coverfile)
 			path = directory / self.coverfile
 
 			try:

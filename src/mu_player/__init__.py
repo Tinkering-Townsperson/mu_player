@@ -6,10 +6,29 @@ from threading import Thread
 
 from flask import Flask, redirect, send_from_directory
 
+import pystray
+from PIL import Image
+
 from .config import COVERS_DIRECTORY, load_app_config
 
 _browser_opened = False
 
+
+def _tray_icon_thread(app):
+	menu = pystray.Menu(
+		pystray.MenuItem(
+			'Open in browser',
+			lambda:_open_browser_thread("http://localhost:5000"),
+			default=True
+		),
+		pystray.MenuItem('Quit', on_quit)
+	)
+	icon = pystray.Icon(
+		'μPlayer',
+		icon=Image.open(os.path.join(app.root_path, "static/logo.png")),
+		menu=menu,
+	)
+	icon.run()
 
 def _open_browser_thread(url):
 	"""Open browser in a background thread after a short delay."""
@@ -17,6 +36,10 @@ def _open_browser_thread(url):
 	time.sleep(1.5)  # Wait for server to be ready
 	webbrowser.open(url)
 
+def on_quit(icon, item):
+	icon.stop()
+	import os
+	os._exit(0)
 
 def create_app(test_config=None):
 	global _browser_opened
@@ -36,8 +59,11 @@ def create_app(test_config=None):
 	if should_open_browser and should_open_in_this_process and not _browser_opened:
 		_browser_opened = True
 		url = "http://localhost:5000"
-		thread = Thread(target=_open_browser_thread, args=(url,), daemon=True)
-		thread.start()
+		browser_thread = Thread(target=_open_browser_thread, args=(url,), daemon=True)
+		browser_thread.start()
+
+	tray_thread = Thread(target=_tray_icon_thread, args=(app,), daemon=True)
+	tray_thread.start()
 
 	@app.route("/")
 	def index():

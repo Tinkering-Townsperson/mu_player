@@ -4,10 +4,9 @@ import os
 import webbrowser
 from threading import Thread
 
-from flask import Flask, redirect, send_from_directory
-
 import pystray
 from PIL import Image
+from flask import Flask, redirect, send_from_directory
 
 from .config import COVERS_DIRECTORY, load_app_config
 

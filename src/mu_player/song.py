@@ -1,9 +1,44 @@
 import eyed3
 from pathlib import Path
+from datetime import timedelta
+import srt
 from .config import COVERS_DIRECTORY
 import pygame
 
 pygame.mixer.init()
+
+
+def parse_embedded_srt(text: str) -> list[dict]:
+	if not text or not text.strip():
+		return []
+
+	try:
+		subtitles = list(srt.parse(text))
+	except (srt.SRTParseError, ValueError, TypeError):
+		return []
+
+	cues = []
+
+	for index, subtitle in enumerate(subtitles):
+		text = subtitle.content.strip()
+
+		if not text:
+			continue
+
+		start_ms = max(0, round(subtitle.start.total_seconds() * 1000))
+		end_ms = max(0, round(subtitle.end.total_seconds() * 1000))
+
+		if end_ms <= start_ms:
+			continue
+
+		cues.append({
+			"index": subtitle.index or index + 1,
+			"start_ms": start_ms,
+			"end_ms": end_ms,
+			"text": text,
+		})
+
+	return sorted(cues, key=lambda cue: cue["start_ms"])
 
 
 class Song:
@@ -39,6 +74,8 @@ class Song:
 		self.tracknum = None
 
 		self.lyrics = None
+		self.lyrics_format = "plain"
+		self.lyrics_cues = []
 
 		self.cover = None
 		self.coverfile = None
@@ -57,6 +94,11 @@ class Song:
 			self.tracknum = self.metadatafile.tag.track_num[0]
 		if self.metadatafile.tag.lyrics:
 			self.lyrics = self.metadatafile.tag.lyrics[0].text
+
+			self.lyrics_cues = parse_embedded_srt(self.lyrics)
+
+			if self.lyrics_cues:
+				self.lyrics_format = "srt"
 
 		self.generate_stem()
 

@@ -7,5 +7,5 @@ This app extracts ID3 metadata from audio files, including any album/artist info
 
 FEATURES COMING SOON:
 [x] tray icon
-[ ] SRT support?
+[x] SRT support?
 [ ] playlist support

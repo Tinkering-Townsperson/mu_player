@@ -140,6 +140,8 @@ def serialize_song(song: Song):
 		"artist": song.artist,
 		"album": song.album,
 		"lyrics": song.lyrics,
+		"lyrics_format": song.lyrics_format,
+		"lyrics_cues": song.lyrics_cues,
 		"cover": cover_url,
 		"key": song.stem,
 		"duration": song.duration,

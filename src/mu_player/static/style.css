@@ -139,6 +139,19 @@ img.cover-art {
 	flex-direction: row-reverse;
 }
 
+.lyrics-cue {
+	display: block;
+	transition: font-weight 120ms ease, opacity 120ms ease;
+}
+
+.lyrics-cue.is-active {
+	font-weight: 700;
+}
+
+.lyrics-cue:not(.is-active) {
+	opacity: 0.75;
+}
+
 .side-pane-label {
 	list-style: none;
 	display: flex;
